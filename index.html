@@ -1,0 +1,210 @@
+
+<html ng-app="musicPlayer">
+	<head>
+		<!-- Meta tags -->
+		<meta name="author" content="Abdalla Elmedny">
+		<meta name="description" 
+		content="Material design music player that has the option to remotely control your devices using a real time database">
+		<meta name="keywords" content="JS, javascript, css, angularjs, firebase, material design, md, mdl, material design lite, angularfire, realtime, css, html, jquery, material icons, roboto, dribble, design, project, music, player, hans zimmer, batman, superman, calvin harris, development">
+		<meta name="theme-color" content="#34495E">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Material player</title>
+		<link rel="stylesheet" href="bower_components/material-design-lite/material.min.css">
+		<script src="bower_components/material-design-lite/material.min.js"></script>
+		<link href='https://fonts.googleapis.com/css?family=Roboto:400,300' rel='stylesheet' type='text/css'>
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<script src="bower_components/jquery/dist/jquery.min.js"></script>
+		<link rel="stylesheet" href="styles.css">
+		<script src="bower_components/angular/angular.min.js"></script>
+		<script src="bower_components/firebase/firebase.js"></script>
+		<script src="bower_components/angularfire/dist/angularfire.min.js"></script>
+		<script src="js/script.js"></script>
+		<script src="https://use.fonticons.com/4b39c0ac.js" async></script> 
+			<!-- 	<script src="https://dl.dropboxusercontent.com/s/b8l3cnyi354m37m/playlist.js?preview=playlist.js"></script> -->
+			<!-- <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" /> -->
+		</head>
+		<body ng-controller="mainController" ng-keyup="keyUpsHandler($event.keyCode)" ng-cloak>
+			<nav>
+				<label class="mdl-button mdl-js-button mdl-js-ripple-effect" for="albumPage" ng-click="loadAlbum()"><i class="material-icons">album</i></label>
+				<label class="mdl-button mdl-js-button mdl-js-ripple-effect" for="playerPage"><i class="material-icons">play_arrow</i></label>
+				<label class="mdl-button mdl-js-button mdl-js-ripple-effect" for="devicesPage"><i class="material-icons">devices</i></label>
+			</nav>
+			<div id="wrapper">
+				<!-- Checkboxes have to be siblings to work -->
+				<input type="radio" name="pageSwitch" id="albumPage">
+				<input type="radio" name="pageSwitch" id="playerPage" checked>
+				<input type="radio" name="pageSwitch" id="devicesPage">
+				<div id="movingContainer" class="animate">
+				<!-- Albums -->
+					<div class="block">
+						<div id="albumCardsContainer">
+							<div class="albumCard hide" id="{{$index}}" ng-repeat="album in playlist" ng-init="$last ? loaded(0) : null">
+								<img ng-src="{{album.albumart}}" class="albumImage defaultPosition" id="{{$index}}">
+								<div class="info defaultPosition">
+									<div class="album text" title="{{album.name}}">{{album.name | limitTo:15}}</div>
+									<div class="artist text">{{album.artist}}</div>
+									<div class="song text">{{album.album[0].name}}</div>
+									<i class="material-icons text" ng-click="showRatingCard($index)">star_border</i>
+								</div>
+							</div>
+						</div>
+						<!-- Fake music player for the animation -->
+						<div id="transitionContainer">
+							<!-- <div class="fakeCover">
+								<img class="cover" src="Images/Interstellar.jpg" alt="Album cover">
+							</div> -->
+							  		
+							  <button id="fakeButton" class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect fab">
+							  <i class="material-icons">play_arrow</i>
+							  </button>
+							  
+							</button>
+				
+						</div>
+					</div>
+					<div class="block">
+						<!-- Music player -->
+						<div id="container">
+							<!-- Icon button -->
+							<button id="playlistBtn" class="mdl-button mdl-js-button mdl-button--icon mdl-js-ripple-effect clipSpecefic">
+							  <i class="material-icons">queue_music</i>
+							</button>
+							<div id="errorMessage" class="icon material-icons error">error</div>
+							<div class="mdl-tooltip" for="errorMessage">
+							 	Clip path unsupported, use chrome for a better experience
+							</div>
+							<div class="coverContainer">
+								<div id="imgOverlay" class="clipSpecefic">
+									<div id="playlist">
+										<div class="album">{{playlist[albumIndex].name}}</div>
+										<div class='song' ng-repeat="item in playlist[albumIndex].album" ng-class="{playing: item.name == song}" ng-click="chooseSong($index)">
+											<span class="number">{{$index+1}}</span>
+											<i class="material-icons hide">play_arrow</i> 
+											{{item.name}}
+										</div>
+									</div>
+								</div>
+								<img id="cover" src="Images/Interstellar.jpg" alt="Album cover">
+							</div>
+							<button id="play" class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored fab">
+							<i id="fabIcon" class="material-icons">play_arrow</i>
+							</button>
+							<div id="progressContainer">
+								<div id="tail"></div>
+								<div id="progressBar">
+									<div id="progress"></div>
+								</div>
+							</div>
+							<div class="controlsContainer">
+								<button id="previous" ng-click="songNavigation(false)" class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect fab cntrl">
+								<i class="material-icons cntrl">fast_rewind</i>
+								</button>
+								<div id="fabGhost"></div>
+								<button id="next" ng-click="songNavigation(true)" class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect fab cntrl">
+								<i class="material-icons">fast_forward</i>
+								</button>
+								<i class="material-icons cntrl" id="volumeDown">volume_down</i>
+								<input class="mdl-slider mdl-js-slider" id="volume" type="range"
+								min="0" max="100" value="50" tabindex="0">
+								<i class="material-icons cntrl" id="volumeUp">volume_up</i>
+							</div>
+							<div id="infoContainer" class="songInfo">
+								<div id="artist" class="songInfo">{{artist}}</div>
+								<div id="song" class="songInfo">{{song}}</div>
+								<div id="bottomSheet" class="songInfo" title="{{song.name}}">
+									{{artist}} / {{song | limitTo:21}} 
+									<div id="currentTime">
+										{{currentTimeFormatted}}
+									</div>
+								</div>
+							</div>
+							
+						</div>
+					 </div>
+					<div class="block">
+
+						<!--  Devices --> 
+						<div class="gButton normal" role="login button" ng-click="login()" ng-class="{normal: loggedIn == false, disabled: loggedIn == true}">
+							<img class="logoTile" src="Images/gButtonNormal.svg"/>
+							<img class="logoTile" src="Images/gButtonDisabled.svg"/>
+							<span>Sign in with Google</span>
+						</div>
+
+						<div id="tempDiv">
+							
+							<span ng-hide="loggedIn" target="_blank">
+							Demo of this feature 
+							<br>
+							<a href="https://www.youtube.com/watch?v=uIsNhBdHygY">
+								<i class="fa fa-youtube-play"></i>
+							</a>
+							</span>
+							<!-- <div id="login" ng-click="login()" ng-class="{disabled: loggedIn == true}"></div> -->
+							
+							<!-- <img id="login" src="images/GoogleBranding/normal.png" alt="Sign in button" ng-mouseover="hover()"> -->
+							
+							<button id="logout" ng-click="logout()" ng-hide="!loggedIn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+							Logout
+							</button>
+							<!-- <button class="authentication" ng-click="login()" ng-hide="loggedIn">login</button>
+							<button class="authentication" ng-click="logout()" ng-hide="!loggedIn">logout</button> -->
+							<div ng-hide="!loggedIn">
+								<select ng-model="selectedDevice" ng-options="device as device.browser + ' on ' + device.name for device in devices" ng-change="changeDevice()">
+									<option></option>
+								</select>
+								<div ng-if="selectedDevice">
+									<p>{{selectedDevice.browser}} on {{selectedDevice.name}} is playing</p>
+									<p>{{playlist[remoteInfo.albumIndex].album[remoteInfo.songIndex].name}} | {{playlist[remoteInfo.albumIndex].name}}</p>
+									<p>Time:{{remoteInfo.time}} | Volume:{{remoteInfo.volume}} </p>
+								</div>
+								
+								<!-- <div class="material-icons mdl-badge mdl-badge--overlap" data-badge="{{devicesCount}}">devices</div> -->
+								<button ng-click="control()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
+								  control
+								</button>
+								
+							</div>
+						</div>
+
+					</div>
+				</div>
+			</div>
+
+			<div id="ratingCardWrapper">
+				<div id="ratingCard">
+					
+				  <div class="text title">Rate this album</div>
+				  <div class="text artist">{{selectedAlbumArtist}}</div>
+				  <div class="text album">{{selectedAlbumName}}</div>
+				  <div id="rating">
+				    <i class="material-icons star" ng-click="rate(1)">star_border</i>
+				    <i class="material-icons star" ng-click="rate(2)">star_border</i>
+				    <i class="material-icons star" ng-click="rate(3)">star_border</i>
+				    <i class="material-icons star" ng-click="rate(4)">star_border</i>
+				    <i class="material-icons star" ng-click="rate(5)">star_border</i>
+				    <i class="material-icons" ng-click="showStars()">expand_less</i>
+				  </div>
+				  <img ng-src="{{selectedAlbumArt}}" alt="cover">
+				</div>
+			</div>
+			<div id="toast">
+				<span id="toastText">Loading...</span>
+			</div>
+			
+			
+			<!-- <i class="material-icons error">error</i> -->
+		</body>
+	</html>
+
+	<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', 'UA-76350786-1', 'auto');
+	  ga('send', 'pageview');
+
+	</script>
